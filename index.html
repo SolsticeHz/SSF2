@@ -54,7 +54,7 @@
     if (i >= RUFFLES.length) { msg.textContent = "Couldn't load Ruffle."; return; }
     var s = document.createElement("script");
     s.src = RUFFLES[i];
-    s.onload = function () { done(); };
+    s.onload = function () { window.__ruffleSrc = RUFFLES[i]; done(); };
     s.onerror = function () { loadRuffle(i + 1, done); };
     document.head.appendChild(s);
   }
@@ -70,7 +70,19 @@
     pl.load({
       url: SWF, base: BASE, quality: "high", allowScriptAccess: true,
       autoplay: "on", unmuteOverlay: "hidden", letterbox: "on", splashScreen: false
-    }).catch(function (e) { msg.textContent = "Couldn't download the game: " + (e && e.message || e); });
+    }).catch(function (e) {
+      var nav = "?";
+      try { nav = performance.getEntriesByType("navigation")[0].name; } catch (_) {}
+      var sw = (navigator.serviceWorker && navigator.serviceWorker.controller) ? "yes" : "no";
+      var ruffleSrc = RUFFLES.indexOf(window.__ruffleSrc) === 0 ? "proxied" : "jsDelivr fallback";
+      msg.textContent = "Couldn't download the game. Opened at: " + nav + " | proxy service worker active: " + sw +
+        " | Ruffle from: " + ruffleSrc + " | probing…";
+      fetch(SWF).then(function (r) {
+        msg.textContent += " SWF probe: HTTP " + r.status;
+      }).catch(function (err) {
+        msg.textContent += " SWF probe: " + (err && err.message || err);
+      });
+    });
   });
 })();
 </script>
